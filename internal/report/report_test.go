@@ -74,16 +74,16 @@ func TestWrite_JSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	var decoded struct {
-		Files   map[string][]struct {
+		Files map[string][]struct {
 			Line    int    `json:"line"`
 			Column  int    `json:"column"`
 			Rule    string `json:"rule"`
 			Message string `json:"message"`
 		} `json:"files"`
 		Summary struct {
-			Files         int  `json:"files"`
-			Issues        int  `json:"issues"`
-			FilesScanned  *int `json:"files_scanned"`
+			Files        int  `json:"files"`
+			Issues       int  `json:"issues"`
+			FilesScanned *int `json:"files_scanned"`
 		} `json:"summary"`
 	}
 	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {

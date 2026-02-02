@@ -1,9 +1,9 @@
 package rules
 
 const (
-	TL001ID     = "TL001"
-	TL001NoEnd  = "file must end with exactly one newline"
-	TL001Multi  = "file must end with exactly one newline (multiple newlines at end)"
+	TL001ID    = "TL001"
+	TL001NoEnd = "file must end with exactly one newline"
+	TL001Multi = "file must end with exactly one newline (multiple newlines at end)"
 )
 
 func CheckTL001(file string, content []byte) []Issue {

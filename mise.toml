@@ -1,2 +1,18 @@
 [tools]
 go = "1.25.6"
+hk = "1.2.0"
+pkl = "0.28.2"
+
+[tasks.init]
+description = "initializes the project"
+run = [
+    "mise install",
+    "hk install --mise",
+]
+
+[tasks.build]
+description = "builds the project"
+run = [
+    "go mod tidy",
+    "go build -o textlint .",
+]

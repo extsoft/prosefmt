@@ -1,8 +1,8 @@
 package rules
 
 const (
-	TL010ID     = "TL010"
-	TL010Msg    = "no trailing spaces at end of line"
+	TL010ID  = "TL010"
+	TL010Msg = "no trailing spaces at end of line"
 )
 
 func CheckTL010(file string, content []byte) []Issue {

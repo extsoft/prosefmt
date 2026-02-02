@@ -101,9 +101,9 @@ type jsonIssue struct {
 }
 
 type jsonSummary struct {
-	Files         int  `json:"files"`
-	Issues        int  `json:"issues"`
-	FilesScanned  *int `json:"files_scanned,omitempty"`
+	Files        int  `json:"files"`
+	Issues       int  `json:"issues"`
+	FilesScanned *int `json:"files_scanned,omitempty"`
 }
 
 type jsonReport struct {

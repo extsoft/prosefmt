@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	mu            sync.RWMutex
-	currentLevel Level = Normal
+	mu           sync.RWMutex
+	currentLevel Level     = Normal
 	output       io.Writer = os.Stderr
 )
 

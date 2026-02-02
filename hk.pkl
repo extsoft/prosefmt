@@ -1,0 +1,38 @@
+amends "package://github.com/jdx/hk/releases/download/v1.2.0/hk@1.2.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.2.0/hk@1.2.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+    // uses builtin prettier linter config
+    ["prettier"] = Builtins.prettier
+
+    // define a custom linter
+    ["pkl"] {
+        glob = "*.pkl"
+        check = "pkl eval {{files}} >/dev/null"
+    }
+    ["gofmt"] {
+        glob = "*.go"
+        check = "gofmt -l -s {{files}}"
+        fix = "gofmt -w -l -s {{files}}"
+    }
+    ["go test"] {
+        glob = "*.go"
+        check = "go test ./..."
+    }
+}
+
+hooks {
+    // git hook
+    ["pre-commit"] {
+        fix = true      // automatically modify files with available linter fixes
+        steps = linters // use defalut linters
+    }
+    // "fix" and "check" are special steps for `hk fix` and `hk check` commands
+    ["fix"] {
+        fix = true
+        steps = linters
+    }
+    ["check"] {
+        steps = linters
+    }
+}
