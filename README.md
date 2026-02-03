@@ -1,5 +1,7 @@
 # textlint
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+
 CLI tool to check and fix text files. Scans files or directories (recursively), reports or fixes style issues. Only text files are processed (content-based: valid UTF-8, no null bytes).
 
 ## Usage
@@ -54,3 +56,7 @@ Install [mise](https://mise.jdx.dev/) (dev tool version manager), then run `mise
 This project uses [hk](https://hk.jdx.dev) for code checks and git hooks. Use `mise check` or `mise fix` to check or autofix.
 
 `mise build` builds the CLI binary.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
