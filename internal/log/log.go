@@ -10,10 +10,9 @@ import (
 type Level int
 
 const (
-	Quiet Level = iota
+	Silent Level = iota
 	Normal
 	Verbose
-	Debug
 )
 
 var (

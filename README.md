@@ -26,10 +26,9 @@ Pass at least one file or directory; directories are scanned recursively. By def
 
 **Output**
 
-- [--format](#--format)
-- [--quiet](#--quiet)
+- [--silent](#--silent)
+- [--compact](#--compact)
 - [--verbose](#--verbose)
-- [--debug](#--debug)
 
 ### `version`
 
@@ -47,29 +46,25 @@ Check only: scan paths and report issues to stdout. Exit code is 1 if any issue 
 
 #### `--write`
 
-Write fixes in place. Files with issues are modified on disk. Prints how many files were written; exit code is 0. Exactly one of `--check` or `--write` is allowed.
+Write fixes in place. Files with issues are modified on disk. Prints how many files were written and lists each path; exit code is 0. Exactly one of `--check` or `--write` is allowed.
 
 ### Output
 
-#### `--format`
+Check mode prints a compact report: one line per issue as `file:line:col: rule: message`, grouped by file then rule; then a summary line `N file(s) scanned, M issue(s).`
 
-Output format for check mode. One of:
+By default output is **compact**: report (or formatted/errored file summary), "No text files found." when applicable, "Wrote N file(s):" plus one path per line in write mode. Use `--silent`, `--compact`, or `--verbose` to set the level explicitly.
 
-- **compact** (default): one line per issue as `file:line:col: rule: message`, then a summary line `N file(s) scanned, M issue(s).`
-- **tap**: TAP 13 for test runners (e.g. `1..M`, `not ok N - file:line:col rule message`).
-- **json**: JSON with `files` (path → list of `{line, column, rule, message}`) and `summary` (`files`, `issues`).
+#### `--silent`
 
-#### `--quiet`
+No standard output printed. Exit code is still 1 when issues are found in check mode.
 
-Quiet (`-q`): no normal stdout; only fatal errors on stderr. Exit code is still 1 when issues are found in check mode.
+#### `--compact`
+
+Show formatted or errored files: report in check mode, "No text files found." when applicable, "Wrote N file(s):" plus one path per line in write mode. This is the default when no output level flag is set. If multiple output flags are set, the noisiest wins (verbose > compact > silent).
 
 #### `--verbose`
 
-Verbose: emit steps, skipped (non-text) paths, and timing on stderr.
-
-#### `--debug`
-
-Debug: same as verbose, plus non-text files skipped with reason, scanner accepted/rejected list, rules per file, and write steps. If multiple verbosity flags are set, the noisiest wins (debug > verbose > normal > quiet).
+Print debug output: steps, scanning summary, scanner accepted/rejected with reasons, rules per file, write steps, and timing on stderr.
 
 ## Implementatio Notes
 
@@ -84,7 +79,7 @@ Both LF and CRLF line endings are supported; the tool preserves the detected sty
 
 ### Text vs binary
 
-Files are included only if they are valid UTF-8 and contain no null bytes. Binary and invalid-encoding files are skipped. When no text files are found, the summary includes "No text files found." (and "0 file(s) scanned, 0 issue(s)." in compact format).
+Files are included only if they are valid UTF-8 and contain no null bytes. Binary and invalid-encoding files are skipped. When no text files are found, the summary includes "No text files found." (and "0 file(s) scanned, 0 issue(s).").
 
 ## Development
 

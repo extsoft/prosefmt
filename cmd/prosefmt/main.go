@@ -17,20 +17,13 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const (
-	FormatCompact = "compact"
-	FormatTAP     = "tap"
-	FormatJSON    = "json"
-)
-
 var (
 	version        = "dev"
 	checkFlag      bool
 	writeFlag      bool
-	formatStr      string
-	quietFlag      bool
+	silentFlag     bool
+	compactFlag    bool
 	verboseFlag    bool
-	debugFlag      bool
 	checkHadIssues bool
 )
 
@@ -56,15 +49,15 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.Flags().BoolVar(&checkFlag, "check", false, "check files and report issues (default)")
 	rootCmd.Flags().BoolVar(&writeFlag, "write", false, "write fixes in place")
-	rootCmd.Flags().StringVar(&formatStr, "format", FormatCompact, "output format: compact, tap, or json")
-	rootCmd.PersistentFlags().BoolVar(&quietFlag, "quiet", false, "print only fatal errors")
-	rootCmd.PersistentFlags().BoolVar(&verboseFlag, "verbose", false, "print steps, skipped files, timing")
-	rootCmd.PersistentFlags().BoolVar(&debugFlag, "debug", false, "print internal state, non-text files skipped with reason")
+	rootCmd.PersistentFlags().BoolVar(&silentFlag, "silent", false, "no standard output printed")
+	rootCmd.PersistentFlags().BoolVar(&compactFlag, "compact", false, "show formatted or errored files (default)")
+	rootCmd.PersistentFlags().BoolVar(&verboseFlag, "verbose", false, "print debug output (steps, scanner, rules, timing)")
 	rootCmd.SetHelpFunc(helpFunc)
 }
 
 var optionFlagNames = map[string]bool{"check": true, "write": true}
-var outputFlagNames = map[string]bool{"format": true, "quiet": true, "verbose": true, "debug": true}
+var outputFlagOrder = []string{"silent", "compact", "verbose"}
+var outputFlagNames = map[string]bool{"silent": true, "compact": true, "verbose": true}
 
 func helpFunc(cmd *cobra.Command, args []string) {
 	out := cmd.OutOrStderr()
@@ -94,15 +87,11 @@ func helpFunc(cmd *cobra.Command, args []string) {
 	})
 	fmt.Fprintln(out, "")
 	fmt.Fprintln(out, "Output:")
-	printed := make(map[string]bool)
-	printOutputFlag := func(f *pflag.Flag) {
-		if outputFlagNames[f.Name] && !printed[f.Name] {
-			printed[f.Name] = true
+	for _, name := range outputFlagOrder {
+		if f := cmd.PersistentFlags().Lookup(name); f != nil {
 			printFlagUsage(out, f)
 		}
 	}
-	cmd.Flags().VisitAll(printOutputFlag)
-	cmd.PersistentFlags().VisitAll(printOutputFlag)
 	if version != "" {
 		fmt.Fprintf(out, "\nVersion: %s\n", version)
 	}
@@ -127,14 +116,14 @@ func Execute() {
 }
 
 func verbosityLevel() log.Level {
-	if debugFlag {
-		return log.Debug
+	if silentFlag {
+		return log.Silent
 	}
 	if verboseFlag {
 		return log.Verbose
 	}
-	if quietFlag {
-		return log.Quiet
+	if compactFlag {
+		return log.Normal
 	}
 	return log.Normal
 }
@@ -150,12 +139,8 @@ func runE(cmd *cobra.Command, args []string) error {
 	if !checkFlag && !writeFlag {
 		checkFlag = true
 	}
-	validFormats := map[string]bool{FormatCompact: true, FormatTAP: true, FormatJSON: true}
-	if !validFormats[formatStr] {
-		return fmt.Errorf("invalid format %q (use compact, tap, or json)", formatStr)
-	}
 	log.SetLevel(verbosityLevel())
-	hadIssues, err := run(checkFlag, writeFlag, formatStr, args)
+	hadIssues, err := run(checkFlag, writeFlag, args)
 	if err != nil {
 		return err
 	}
@@ -163,14 +148,11 @@ func runE(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func run(check, doWrite bool, format string, paths []string) (hadIssues bool, err error) {
+func run(check, doWrite bool, paths []string) (hadIssues bool, err error) {
 	start := time.Now()
 	lvl := log.GetLevel()
-	if lvl >= log.Debug {
-		log.Logf(log.Debug, "debug: check=%v format=%s paths=%v\n", check, format, paths)
-	}
 	if lvl >= log.Verbose {
-		log.Logf(log.Verbose, "Scanning %d path(s): %s\n", len(paths), strings.Join(paths, ", "))
+		log.Logf(log.Verbose, "Configuration: check=%v paths=%v\n", check, paths)
 	}
 	files, skipped, err := scanner.Scan(paths)
 	if err != nil {
@@ -183,25 +165,18 @@ func run(check, doWrite bool, format string, paths []string) (hadIssues bool, er
 		} else {
 			log.Logf(log.Verbose, "Scanned %d text file(s), skipped %d path(s).\n", len(files), len(skipped))
 		}
-	}
-	if lvl >= log.Debug {
 		for _, p := range sortedKeys(skipped) {
-			log.Logf(log.Debug, "scanner: rejected %s (reason: %s)\n", p, skipped[p])
+			log.Logf(log.Verbose, "scanner: rejected %s (reason: %s)\n", p, skipped[p])
 		}
 		for _, p := range files {
-			log.Logf(log.Debug, "scanner: accepted %s\n", p)
-		}
-	}
-	if lvl >= log.Verbose && lvl < log.Debug {
-		for p := range skipped {
-			log.Logf(log.Verbose, "Skipped (not text): %s\n", p)
+			log.Logf(log.Verbose, "scanner: accepted %s\n", p)
 		}
 	}
 	if len(files) == 0 {
 		if lvl >= log.Normal {
 			fmt.Fprintln(os.Stdout, "No text files found.")
 			if check {
-				report.Write(os.Stdout, report.Format(format), nil, 0)
+				report.Write(os.Stdout, report.FormatCompact, nil, 0, nil)
 			}
 		}
 		return false, nil
@@ -223,7 +198,7 @@ func run(check, doWrite bool, format string, paths []string) (hadIssues bool, er
 		if len(issues) > 0 {
 			fileIssues[path] = issues
 			allIssues = append(allIssues, issues...)
-			if lvl >= log.Debug {
+			if lvl >= log.Verbose {
 				ruleIDs := make(map[string]bool)
 				for _, i := range issues {
 					ruleIDs[i.RuleID] = true
@@ -233,13 +208,13 @@ func run(check, doWrite bool, format string, paths []string) (hadIssues bool, er
 					ids = append(ids, id)
 				}
 				sort.Strings(ids)
-				log.Logf(log.Debug, "rules: %s -> %d issue(s): %s\n", path, len(issues), strings.Join(ids, ", "))
+				log.Logf(log.Verbose, "rules: %s -> %d issue(s): %s\n", path, len(issues), strings.Join(ids, ", "))
 			}
 		}
 	}
 	if check {
 		if lvl >= log.Normal {
-			if err := report.Write(os.Stdout, report.Format(format), allIssues, len(files)); err != nil {
+			if err := report.Write(os.Stdout, report.FormatCompact, allIssues, len(files), files); err != nil {
 				return false, err
 			}
 		}
@@ -254,12 +229,20 @@ func run(check, doWrite bool, format string, paths []string) (hadIssues bool, er
 		if err := fix.Apply(path); err != nil {
 			return false, err
 		}
-		if lvl >= log.Debug {
-			log.Logf(log.Debug, "write: applied to %s\n", path)
+		if lvl >= log.Verbose {
+			log.Logf(log.Verbose, "write: applied to %s\n", path)
 		}
 	}
 	if lvl >= log.Normal && len(fileIssues) > 0 {
-		fmt.Fprintf(os.Stdout, "Wrote %d file(s).\n", len(fileIssues))
+		paths := make([]string, 0, len(fileIssues))
+		for p := range fileIssues {
+			paths = append(paths, p)
+		}
+		sort.Strings(paths)
+		fmt.Fprintf(os.Stdout, "Wrote %d file(s):\n", len(paths))
+		for _, p := range paths {
+			fmt.Fprintln(os.Stdout, p)
+		}
 	}
 	elapsed := time.Since(start)
 	if lvl >= log.Verbose {

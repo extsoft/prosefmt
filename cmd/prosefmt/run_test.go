@@ -54,18 +54,18 @@ func captureStderr(fn func()) string {
 	return buf.String()
 }
 
-func TestRun_Quiet_NoStdout(t *testing.T) {
+func TestRun_Silent_NoStdout(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "bad.txt")
 	if err := os.WriteFile(f, []byte("x  \n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	log.SetLevel(log.Quiet)
+	log.SetLevel(log.Silent)
 	defer log.SetLevel(log.Normal)
 	var hadIssues bool
 	var runErr error
 	stdout := captureStdout(func() {
-		hadIssues, runErr = run(true, false, FormatCompact, []string{f})
+		hadIssues, runErr = run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -74,7 +74,7 @@ func TestRun_Quiet_NoStdout(t *testing.T) {
 		t.Error("expected hadIssues true")
 	}
 	if len(stdout) != 0 {
-		t.Errorf("quiet: expected no stdout, got %q", stdout)
+		t.Errorf("silent: expected no stdout, got %q", stdout)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = run(true, false, FormatCompact, []string{f})
+		_, runErr = run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -111,7 +111,7 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = run(true, false, FormatCompact, []string{f})
+		_, runErr = run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -124,7 +124,7 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	}
 }
 
-func TestRun_Debug_StderrHasRejectedAndAccepted(t *testing.T) {
+func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
 	dir := t.TempDir()
 	good := filepath.Join(dir, "good.txt")
 	bin := filepath.Join(dir, "bin.bin")
@@ -134,26 +134,26 @@ func TestRun_Debug_StderrHasRejectedAndAccepted(t *testing.T) {
 	if err := os.WriteFile(bin, []byte("x\x00y"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	log.SetLevel(log.Debug)
+	log.SetLevel(log.Verbose)
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = run(true, false, FormatCompact, []string{dir})
+		_, runErr = run(true, false, []string{dir})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
 	}
-	if !strings.Contains(stderr, "debug:") {
-		t.Errorf("debug: expected debug line on stderr, got %q", stderr)
+	if !strings.Contains(stderr, "Configuration:") {
+		t.Errorf("verbose: expected Configuration line on stderr, got %q", stderr)
 	}
 	if !strings.Contains(stderr, "scanner: rejected") {
-		t.Errorf("debug: expected scanner rejected on stderr, got %q", stderr)
+		t.Errorf("verbose: expected scanner rejected on stderr, got %q", stderr)
 	}
 	if !strings.Contains(stderr, "scanner: accepted") {
-		t.Errorf("debug: expected scanner accepted on stderr, got %q", stderr)
+		t.Errorf("verbose: expected scanner accepted on stderr, got %q", stderr)
 	}
 	if !strings.Contains(stderr, "null byte") {
-		t.Errorf("debug: expected reason null byte for binary file, got %q", stderr)
+		t.Errorf("verbose: expected reason null byte for binary file, got %q", stderr)
 	}
 }
 
@@ -167,7 +167,7 @@ func TestRun_ZeroTextFiles_Normal_NoTextFilesFound(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = run(true, false, FormatCompact, []string{bin})
+		_, runErr = run(true, false, []string{bin})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
