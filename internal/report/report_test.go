@@ -2,7 +2,7 @@ package report
 
 import (
 	"bytes"
-	"prosefmt/internal/rules"
+	"github.com/extsoft/prosefmt/internal/rules"
 	"strings"
 	"testing"
 )

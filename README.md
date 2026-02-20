@@ -2,7 +2,60 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-`prosefmt` is the simplest text formatter for making your files look correct. No complex rules, no massive configuration files — just clean text.
+`prosefmt` is the simplest text formatter for making your files look correct. No complex rules,
+no massive configuration files — just clean text.
+
+## Overview
+
+Over the years, I've used to format files with text or code in a specific way, like removing trailing
+spaces or adding a new line at the end. If a code formatter is used in a project, it usually handles
+these tasks. However, some projects simply do not have one, and introducing a formatter can be
+a significant challenge. And even when a formatter is configured, some project files are still
+ignored because formatters are trained for specific languages and file types.
+
+`prosefmt` is the simplest formatter for any text files. If the project does not have a formatter, it could
+be the first one you integrate. If the project has some, it could be a useful addition.
+
+`prosefmt` is designed to process any text files while automatically ignoring binary files (which contain
+null bytes or control characters). The tool does not use configuration files; all settings are specified
+via the command line with sensitive defaults. Additionally, for security reasons, files are only overwritten
+when the `write` command is explicitly issued.
+
+The tool supports the following rules:
+
+- PF1 - a file must end with exactly one newline. Both LF and CRLF line endings are supported.
+  The tool preserves the detected style when writing.
+- PF2 - no trailing space(s) or tab(s) at the end of a line.
+
+## Getting Started
+
+### Installation
+
+#### GitHub Release
+
+Go to <https://github.com/extsoft/prosefmt/releases> and download compatible binary.
+
+#### `mise`
+
+```sh
+mise use github:extsoft/prosefmt
+```
+
+###
+
+### Usage
+
+For safety reasons (to prevent any unwated file changes), please run the `check` command first.
+
+```sh
+prosefmt check some/path some.file
+```
+
+The output wll show what files will be updated and why. Once you ready to format, run
+
+```sh
+prosefmt write some/path some.file
+```
 
 ## CLI reference
 
@@ -57,21 +110,6 @@ Show formatted or errored files: report in check mode, "No text files found." wh
 #### `--verbose`
 
 Print debug output: steps, scanning summary, scanner accepted/rejected with reasons, rules per file, write steps, and timing on stderr.
-
-## Implementation Notes
-
-### Rules
-
-| ID | Description |
-|----|-------------|
-| **TL001** | File must end with exactly one newline (LF or CRLF). |
-| **TL010** | No trailing spaces or tabs at the end of a line. |
-
-Both LF and CRLF line endings are supported; the tool preserves the detected style when writing.
-
-### Text vs binary
-
-Files are included only if they are valid UTF-8 and contain no null bytes. Binary and invalid-encoding files are skipped. When no text files are found, the summary includes "No text files found." (and "0 file(s) scanned, 0 issue(s).").
 
 ## Development
 

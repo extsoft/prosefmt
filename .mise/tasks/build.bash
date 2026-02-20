@@ -5,4 +5,4 @@ set -o errexit -o nounset
 : "${DIST_DIR:=dist}"
 go mod tidy
 VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || echo "dev")
-go build -ldflags="-s -w -X prosefmt/cmd/prosefmt.version=${VERSION}" -o "${DIST_DIR}/prosefmt" .
+go build -ldflags="-s -w -X github.com/extsoft/prosefmt/internal/cli.Version=${VERSION}" -o "${DIST_DIR}/prosefmt" ./cmd/prosefmt

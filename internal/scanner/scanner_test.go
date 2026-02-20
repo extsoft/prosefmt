@@ -40,21 +40,38 @@ func TestScan_ExcludesBinary(t *testing.T) {
 	}
 }
 
-func TestScan_ExcludesInvalidUTF8(t *testing.T) {
+func TestScan_ExcludesBinaryOrControlChars(t *testing.T) {
 	dir := t.TempDir()
-	invalid := filepath.Join(dir, "invalid.txt")
-	if err := os.WriteFile(invalid, []byte{0x80, 0x81, 0x82}, 0644); err != nil {
+	withControl := filepath.Join(dir, "control.txt")
+	if err := os.WriteFile(withControl, []byte("hello\x01world\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	files, skipped, err := Scan([]string{invalid})
+	files, skipped, err := Scan([]string{withControl})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(files) != 0 {
-		t.Errorf("expected no files (invalid UTF-8), got %v", files)
+		t.Errorf("expected no files (control char), got %v", files)
 	}
-	if reason, ok := skipped[invalid]; !ok || reason != "invalid UTF-8" {
-		t.Errorf("expected skipped[%q]=invalid UTF-8, got %q", invalid, reason)
+	if reason, ok := skipped[withControl]; !ok || reason != "binary or control characters" {
+		t.Errorf("expected skipped[%q]=binary or control characters, got %q", withControl, reason)
+	}
+}
+
+func TestScan_IncludesAnyEncoding(t *testing.T) {
+	dir := t.TempDir()
+	withHighBytes := filepath.Join(dir, "high.txt")
+	content := []byte("r\xe9sum\xe9\n")
+	if err := os.WriteFile(withHighBytes, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	files, skipped, err := Scan([]string{withHighBytes})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = skipped
+	if len(files) != 1 || files[0] != withHighBytes {
+		t.Errorf("expected one file, got %v", files)
 	}
 }
 

@@ -2,8 +2,8 @@ package report
 
 import (
 	"fmt"
+	"github.com/extsoft/prosefmt/internal/rules"
 	"io"
-	"prosefmt/internal/rules"
 	"sort"
 )
 

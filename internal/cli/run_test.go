@@ -1,13 +1,15 @@
-package prosefmt
+package cli_test
 
 import (
 	"bytes"
 	"io"
 	"os"
 	"path/filepath"
-	"prosefmt/internal/log"
 	"strings"
 	"testing"
+
+	"github.com/extsoft/prosefmt/internal/cli"
+	"github.com/extsoft/prosefmt/internal/log"
 )
 
 func captureStdout(fn func()) string {
@@ -65,7 +67,7 @@ func TestRun_Silent_NoStdout(t *testing.T) {
 	var hadIssues bool
 	var runErr error
 	stdout := captureStdout(func() {
-		hadIssues, runErr = run(true, false, []string{f})
+		hadIssues, runErr = cli.Run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -88,7 +90,7 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = run(true, false, []string{f})
+		_, runErr = cli.Run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -111,7 +113,7 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = run(true, false, []string{f})
+		_, runErr = cli.Run(true, false, []string{f})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -138,7 +140,7 @@ func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = run(true, false, []string{dir})
+		_, runErr = cli.Run(true, false, []string{dir})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -167,7 +169,7 @@ func TestRun_ZeroTextFiles_Normal_NoTextFilesFound(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = run(true, false, []string{bin})
+		_, runErr = cli.Run(true, false, []string{bin})
 	})
 	if runErr != nil {
 		t.Fatal(runErr)

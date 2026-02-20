@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"unicode/utf8"
 )
 
 const maxScanBytes = 32 * 1024
@@ -81,13 +80,13 @@ func isTextFileWithReason(path string) (bool, string) {
 	if n == 0 {
 		return true, ""
 	}
-	for i := 0; i < len(buf); i++ {
-		if buf[i] == 0 {
+	for _, b := range buf {
+		if b == 0 {
 			return false, "null byte"
 		}
-	}
-	if !utf8.Valid(buf) {
-		return false, "invalid UTF-8"
+		if b <= 0x08 || b == 0x0B || b == 0x0C || (b >= 0x0E && b <= 0x1F) || b == 0x7F {
+			return false, "binary or control characters"
+		}
 	}
 	return true, ""
 }

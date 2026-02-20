@@ -1,4 +1,4 @@
-module prosefmt
+module github.com/extsoft/prosefmt
 
 go 1.25.6
 

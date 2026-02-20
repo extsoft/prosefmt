@@ -1,9 +1,9 @@
 package fix
 
 import (
+	"github.com/extsoft/prosefmt/internal/rules"
 	"os"
 	"path/filepath"
-	"prosefmt/internal/rules"
 	"testing"
 )
 
