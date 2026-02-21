@@ -43,7 +43,7 @@ local linters = new Mapping<String, Step> {
     depends = "shfmt"
     batch = true
     glob = "*.{sh,bash}"
-    check = "shellcheck --exclude=SC2086 {{files}}"
+    check = "shellcheck {{files}}"
   }
 }
 

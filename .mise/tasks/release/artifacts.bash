@@ -112,7 +112,7 @@ generate_checksum() {
 
 # Main execution
 ## Get abbreviated version (tag or commit)
-VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || git rev-parse --short=7 HEAD)
+VERSION=${1:?version is required}
 echo "Building release artifacts for version: $VERSION"
 DIST_DIR="${DIST_DIR:-dist}"
 DIST_VERSION_DIR="$DIST_DIR/$VERSION"
