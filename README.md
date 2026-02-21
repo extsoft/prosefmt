@@ -31,17 +31,21 @@ The tool supports the following rules:
 
 ### Installation
 
-#### GitHub Release
-
-Go to <https://github.com/extsoft/prosefmt/releases> and download compatible binary.
-
 #### `mise`
 
 ```sh
 mise use github:extsoft/prosefmt
 ```
 
-###
+#### Manual Binary Download
+
+Go to <https://github.com/extsoft/prosefmt/releases> and download compatible binary.
+
+#### Install from sources
+
+```sh
+go install github.com/extsoft/prosefmt@latest
+```
 
 ### Usage
 
