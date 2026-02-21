@@ -53,18 +53,14 @@ parse_args() {
 default_dest_dir() {
   for dir in "${HOME}/.local/bin" "${HOME}/bin" "/usr/local/bin" "/usr/bin" "/usr/sbin" "/opt/bin"; do
     if [ -d "$dir" ] && [ -w "$dir" ]; then
+      log_step "  $dir: exists, writable (using)"
       echo "$dir"
       return 0
     fi
-    if ! [ -d "$dir" ]; then
-      parent=$(dirname "$dir")
-      while [ -n "$parent" ] && [ "$parent" != "." ] && [ "$parent" != "/" ]; do
-        if [ -d "$parent" ] && [ -w "$parent" ]; then
-          echo "$dir"
-          return 0
-        fi
-        parent=$(dirname "$parent")
-      done
+    if [ -d "$dir" ]; then
+      log_err "  $dir: exists, not writable (skip)"
+    else
+      log_err "  $dir: missing (skip)"
     fi
   done
   return 1
@@ -205,9 +201,20 @@ hash_sha256_verify() {
 
 untar() {
   tarball="$1"
+  _tar_stderr=$(mktemp)
   case "$tarball" in
-    *.tar.gz | *.tgz) tar -xzf "$tarball" ;;
-    *.tar) tar -xf "$tarball" ;;
+    *.tar.gz | *.tgz)
+      tar -xzf "$tarball" 2> "$_tar_stderr"; _code=$?
+      grep -v 'Ignoring unknown extended header' "$_tar_stderr" >&2 || true
+      rm -f "$_tar_stderr"
+      return $_code
+      ;;
+    *.tar)
+      tar -xf "$tarball" 2> "$_tar_stderr"; _code=$?
+      grep -v 'Ignoring unknown extended header' "$_tar_stderr" >&2 || true
+      rm -f "$_tar_stderr"
+      return $_code
+      ;;
     *.zip) unzip -q "$tarball" ;;
     *)
       log_err "Unsupported archive format"
@@ -356,6 +363,7 @@ prompt_install_dir() {
 main() {
   parse_args "$@"
   if [ -z "$BINDIR" ]; then
+    log_info "Checking install directories"
     BINDIR=$(default_dest_dir) || true
     if [ -z "$BINDIR" ]; then
       if [ -t 0 ]; then

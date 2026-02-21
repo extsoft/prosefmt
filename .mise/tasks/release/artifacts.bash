@@ -83,7 +83,8 @@ build_and_archive_platform() {
     generate_checksum "${archive_path}.zip"
   else
     # -czf creates the tarball from the current directory contents
-    tar -czf "${archive_path}.tar.gz" .
+    # COPYFILE_DISABLE=1 for portable archives on macOS
+    COPYFILE_DISABLE=1 tar -czf "${archive_path}.tar.gz" .
     echo "Created ${archive_path}.tar.gz"
     generate_checksum "${archive_path}.tar.gz"
   fi
