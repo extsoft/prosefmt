@@ -5,6 +5,16 @@
 `prosefmt` is the simplest text formatter for making your files look correct. No complex rules,
 no massive configuration files — just clean text.
 
+## Contents
+
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [CLI Reference](#cli-reference)
+- [Development](#development)
+- [License](#license)
+
 ## Overview
 
 Over the years, I've used to format files with text or code in a specific way, like removing trailing
@@ -31,17 +41,33 @@ The tool supports the following rules:
 
 ### Installation
 
+#### Install Script
+
+Download and install the latest release:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh
+```
+
+Install to a custom directory:
+
+```sh
+curl -sSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh -s -- -d ~/.local/bin
+```
+
+Install a specific version:
+
+```sh
+curl -sSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh -s -- -v v1.0.0
+```
+
 #### `mise`
 
 ```sh
 mise use github:extsoft/prosefmt
 ```
 
-#### Manual Binary Download
-
-Go to <https://github.com/extsoft/prosefmt/releases> and download compatible binary.
-
-#### Install from sources
+#### Go Install
 
 ```sh
 go install github.com/extsoft/prosefmt@latest
@@ -61,7 +87,7 @@ The output wll show what files will be updated and why. Once you ready to format
 prosefmt write some/path some.file
 ```
 
-## CLI reference
+## CLI Reference
 
 **Synopsis**
 

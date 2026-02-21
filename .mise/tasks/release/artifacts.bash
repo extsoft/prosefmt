@@ -129,4 +129,8 @@ for platform in "${PLATFORMS[@]}"; do
   build_and_archive_platform "${DIST_VERSION_DIR}" "${VERSION}" "$platform"
 done
 
+# Copy install.sh as a separate artifact
+cp install.sh "${DIST_VERSION_DIR}/"
+echo "Created ${DIST_VERSION_DIR}/install.sh"
+
 echo "Release artifacts built successfully in $DIST_DIR/$VERSION"
