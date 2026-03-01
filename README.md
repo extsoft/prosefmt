@@ -17,29 +17,28 @@ no massive configuration files — just clean text.
 
 ## Overview
 
-Over the years, I've used to format files with text or code in a specific way, like removing trailing
-spaces or adding a new line at the end. If a code formatter is used in a project, it usually handles
-these tasks. However, some projects simply do not have one, and introducing a formatter can be
-a significant challenge. And even when a formatter is configured, some project files are still
-ignored because formatters are trained for specific languages and file types.
+Over the years, I’ve gotten used to formatting text and code files in a specific way, such as removing
+trailing spaces and ensuring there’s a newline at the end of each file. In many projects, a code formatter
+handles these tasks. However, some projects simply don’t use one, and introducing a formatter can be
+a significant challenge. Even when a formatter is configured, some files may still be ignored because most
+formatters are designed for specific languages and file types only.
 
-`prosefmt` is the simplest formatter for any text files. If the project does not have a formatter, it could
-be the first one you integrate. If the project has some, it could be a useful addition.
+`prosefmt` is a simple formatter for any text file.
+If a project doesn’t have a formatter, it can be the first one you introduce.
+If a project already uses other formatters, `prosefmt` can be a useful addition.
 
-`prosefmt` is designed to process any text files while automatically ignoring binary files (which contain
-null bytes or control characters). The tool does not use configuration files; all settings are specified
-via the command line with sensitive defaults. Additionally, for security reasons, files are only overwritten
-when the `write` command is explicitly issued.
+`prosefmt` is designed to process any text files while automatically ignoring binary files (those containing
+null bytes or control characters). It does not use configuration files; all settings are specified via
+the command line arguments with sensible defaults. For security reasons, files are only overwritten when
+the `write` command is explicitly used.
 
 The tool supports the following rules:
 
 - `PF1`: a file must end with exactly one newline.
 - `PF2`: no trailing space(s) or tab(s) at the end of a line.
-- `PF3`: detect and preserve existing line endings (LF or CRLF); default behavior. `--line-endings=auto`
-- `PF4`: enforce LF (`\n`). Use `--line-endings=linux`.
-- `PF5`: enforce CRLF (`\r\n`) Use `--line-endings=windows`.
-
-Only one line-ending option applies at a time (auto, linux, or windows).
+- `PF3`: detect and preserve existing line endings (LF or CRLF); default behavior.
+- `PF4`: enforce Linux-style LF (`\n`) line endings.
+- `PF5`: enforce Windows-style CRLF (`\r\n`) line endings.
 
 ## Getting Started
 
@@ -47,23 +46,11 @@ Only one line-ending option applies at a time (auto, linux, or windows).
 
 #### Install Script
 
-Download and install the latest release:
+Download and install
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh
-```
-
-Install to a custom directory:
-
-```sh
-curl -sSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh -s -- -d ~/.local/bin
-```
-
-Install a specific version:
-
-```sh
-curl -sSL https://raw.githubusercontent.com/extsoft/prosefmt/main/install.sh | sh -s -- -v v1.0.0
-```
+- the latest release: `curl -fsSL https://prosefmt.extsoft.pro/install.sh | sh`
+- to a custom directory: `curl -sSL https://prosefmt.extsoft.pro/install.sh | sh -s -- -d ~/.local/bin`
+- a specific version: `curl -sSL https://prosefmt.extsoft.pro/install.sh | sh -s -- -v v1.0.0`
 
 #### `mise`
 
@@ -79,13 +66,13 @@ go install github.com/extsoft/prosefmt@latest
 
 ### Usage
 
-For safety reasons (to prevent any unwated file changes), please run the `check` command first.
+For safety and to prevent unwanted file changes, run the `check` command first.
 
 ```sh
 prosefmt check some/path some.file
 ```
 
-The output wll show what files will be updated and why. Once you ready to format, run
+The output shows which files will be updated and why. Once you’re ready to apply the changes, run the `write` command.
 
 ```sh
 prosefmt write some/path some.file
@@ -93,61 +80,96 @@ prosefmt write some/path some.file
 
 ## CLI Reference
 
-**Synopsis**
+**Usage**: `prosefmt [command] [file...]`
 
-```bash
-prosefmt [command] [path...]
-```
 
-Pass at least one file or directory; directories are scanned recursively. With no command, runs **check** by default (report only). Use the **write** command to apply fixes in place. Output options (`--silent`, `--compact`, `--verbose`) apply only to the **check** and **write** commands.
+By default, `prosefmt` runs the [check](#check-command) command on the specified files
+and directories — at least one file must be provided. Directories are scanned recursively.
 
 **Commands**
 
-- [check](#check) (default)
-- [write](#write)
-- [version](#version)
+- [check](#check-command) (default)
+- [write](#write-command)
+- [version](#version-command)
+- [completion](#completion-command)
 
-### `check`
+### `check` command
 
-Check files and report issues. Scan paths and report issues to stdout. Exit code is 1 if any issue is found, 0 otherwise. This is the default when no command is specified (e.g. `prosefmt path...`).
+**Usage**: `prosefmt check [flags] files...`
 
-**Output** (only for this command):
+The `check` command scans the specified files for formatting issues. Binary files are ignored.
+If a directory is provided, it is scanned recursively to find files.
+The command exits with code `1` if at least one issue is detected; otherwise, it exits with code `0`.
+The `check` command runs by default when no other command is specified.
 
-- [--silent](#--silent): No standard output printed. Exit code is still 1 when issues are found.
-- [--compact](#--compact): Show report / formatted or errored files (default when no output flag is set).
-- [--verbose](#--verbose): Print debug output on stderr (steps, scanning summary, rules per file, timing).
+**Flags**
 
-### `write`
+- [Configuration Flags](#configuration-flags)
+  - [--line-endings](#--line-endings)
+- [Output Flags](#output-flags)
+  - [--silent](#--silent)
+  - [--compact](#--compact)
+  - [--verbose](#--verbose)
 
-Write fixes in place. Files with issues are modified on disk. Prints how many files were written and lists each path; exit code is 0.
+### `write` command
 
-**Output** (only for this command): same as [check](#check) — `--silent`, `--compact`, `--verbose`.
+**Usage**: `prosefmt write [flags] files...`
 
-### `version`
+The `write` command fixes formatting issues in the specified files. Binary files are ignored.
+If a directory is provided, it is scanned recursively to find files.
+The exit code is always `0`.
 
-Print the version number. Run: `prosefmt version`.
+**Flags**
 
-### Output (check and write only)
+- [Configuration Flags](#configuration-flags)
+  - [--line-endings](#--line-endings)
+- [Output Flags](#output-flags)
+  - [--silent](#--silent)
+  - [--compact](#--compact)
+  - [--verbose](#--verbose)
 
-Check prints a compact report: one line per issue as `file:line:col: rule: message`, grouped by file then rule; then a summary line `N file(s) scanned, M issue(s).`
+### `version` command
 
-By default output is **compact**: report (or "No text files found.", or "Wrote N file(s):" plus paths in write mode). If multiple output flags are set, the noisiest wins (verbose > compact > silent).
+**Usage**: `prosefmt version`
 
-#### `--silent`
+The `version` command prints the tool version.
 
-No standard output printed. Exit code is still 1 when issues are found in check mode.
+### `completion` command
 
-#### `--compact`
+**Usage**: `prosefmt completion bash|zsh|fish|powershell`
 
-Show formatted or errored files: report in check mode, "No text files found." when applicable, "Wrote N file(s):" plus one path per line in write mode. Default when no output level flag is set.
+The `completion` command generates shell completion scripts.
 
-#### `--verbose`
-
-Print debug output: steps, scanning summary, scanner accepted/rejected with reasons, rules per file, write steps, and timing on stderr.
+### Configuration Flags
 
 #### `--line-endings`
 
-Line ending mode: `auto` (default), `linux`, or `windows`. Only one value is allowed. Default is **auto** (detect and preserve existing LF or CRLF). Use `linux` to enforce LF; use `windows` to enforce CRLF. Applies to both **check** and **write** commands.
+The `--line-endings` flag configures how line endings are handled.
+Use `auto` (default) to preserve existing line endings. `linux` enforces LF (\n). `windows` enforces CRLF (\r\n).
+
+> This flag is available for the [check](#check-command) and [write](#write-command) commands only.
+
+### Output Flags
+
+The [check](#check-command) and [write](#write-command) commands print output to standard output.
+The flags below determine the output format.
+
+> These flags are available for the [check](#check-command) and [write](#write-command) commands only.
+
+#### `--silent`
+
+No output printed.
+
+#### `--compact`
+
+The compact output format prints issue details for the [check](#check-command) command or
+updated file names for the [write](#write-command) command.
+
+#### `--verbose`
+
+The verbose output format provides detailed debug information, including processing steps,
+a scanning summary, scanner acceptance and rejection decisions with reasons, rules applied per file,
+write operations, and timing information.
 
 ## Development
 
