@@ -62,6 +62,15 @@ func addOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("verbose", false, "Print debug output (steps, scanner, rules, timing)")
 }
 
+func addLineEndingsFlag(cmd *cobra.Command) {
+	cmd.Flags().String("line-endings", "auto", "Line endings: auto (detect/preserve), linux (LF), or windows (CRLF). Only one value allowed.")
+}
+
+func lineEndingsModeFromCmd(cmd *cobra.Command) (rules.LineEndingMode, error) {
+	s, _ := cmd.Flags().GetString("line-endings")
+	return rules.ParseLineEndingMode(s)
+}
+
 func outputLevelFromCmd(cmd *cobra.Command) log.Level {
 	silent, _ := cmd.Flags().GetBool("silent")
 	compact, _ := cmd.Flags().GetBool("compact")
@@ -84,6 +93,8 @@ func init() {
 	rootCmd.AddCommand(writeCmd)
 	addOutputFlags(checkCmd)
 	addOutputFlags(writeCmd)
+	addLineEndingsFlag(checkCmd)
+	addLineEndingsFlag(writeCmd)
 	rootCmd.SetHelpFunc(rootHelpFunc)
 	checkCmd.SetHelpFunc(commandHelpFunc)
 	writeCmd.SetHelpFunc(commandHelpFunc)
@@ -112,7 +123,7 @@ func rootHelpFunc(cmd *cobra.Command, args []string) {
 		}
 		fmt.Fprintln(out, "")
 	}
-	fmt.Fprintln(out, "With no command, runs 'check' by default. Use 'check' or 'write' for output options (--silent, --compact, --verbose).")
+	fmt.Fprintln(out, "With no command, runs 'check' by default.")
 	if Version != "" {
 		fmt.Fprintf(out, "\nVersion: %s\n", Version)
 	}
@@ -159,6 +170,11 @@ func commandHelpFunc(cmd *cobra.Command, args []string) {
 			printFlagUsage(out, f)
 		}
 	}
+	if f := cmd.Flags().Lookup("line-endings"); f != nil {
+		fmt.Fprintln(out, "")
+		fmt.Fprintln(out, "Line endings:")
+		printFlagUsage(out, f)
+	}
 	if Version != "" {
 		fmt.Fprintf(out, "\nVersion: %s\n", Version)
 	}
@@ -188,7 +204,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	log.SetLevel(log.Normal)
-	hadIssues, err := Run(true, false, args)
+	hadIssues, err := Run(true, false, args, rules.LineEndAuto)
 	if err != nil {
 		return err
 	}
@@ -201,8 +217,12 @@ func checkRunE(cmd *cobra.Command, args []string) error {
 		commandHelpFunc(cmd, nil)
 		return nil
 	}
+	mode, err := lineEndingsModeFromCmd(cmd)
+	if err != nil {
+		return err
+	}
 	log.SetLevel(outputLevelFromCmd(cmd))
-	hadIssues, err := Run(true, false, args)
+	hadIssues, err := Run(true, false, args, mode)
 	if err != nil {
 		return err
 	}
@@ -215,12 +235,16 @@ func writeRunE(cmd *cobra.Command, args []string) error {
 		commandHelpFunc(cmd, nil)
 		return nil
 	}
+	mode, err := lineEndingsModeFromCmd(cmd)
+	if err != nil {
+		return err
+	}
 	log.SetLevel(outputLevelFromCmd(cmd))
-	_, err := Run(false, true, args)
+	_, err = Run(false, true, args, mode)
 	return err
 }
 
-func Run(check, doWrite bool, paths []string) (hadIssues bool, err error) {
+func Run(check, doWrite bool, paths []string, mode rules.LineEndingMode) (hadIssues bool, err error) {
 	start := time.Now()
 	lvl := log.GetLevel()
 	if lvl >= log.Verbose {
@@ -263,7 +287,7 @@ func Run(check, doWrite bool, paths []string) (hadIssues bool, err error) {
 				log.Logf(log.Verbose, "Writing %s\n", path)
 			}
 		}
-		issues, err := rules.CheckFile(path)
+		issues, err := rules.CheckFile(path, mode)
 		if err != nil {
 			return false, err
 		}
@@ -298,7 +322,7 @@ func Run(check, doWrite bool, paths []string) (hadIssues bool, err error) {
 		return len(allIssues) > 0, nil
 	}
 	for path := range fileIssues {
-		if err := fix.Apply(path); err != nil {
+		if err := fix.Apply(path, mode); err != nil {
 			return false, err
 		}
 		if lvl >= log.Verbose {

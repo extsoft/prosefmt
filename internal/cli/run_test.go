@@ -10,6 +10,7 @@ import (
 
 	"github.com/extsoft/prosefmt/internal/cli"
 	"github.com/extsoft/prosefmt/internal/log"
+	"github.com/extsoft/prosefmt/internal/rules"
 )
 
 func captureStdout(fn func()) string {
@@ -67,7 +68,7 @@ func TestRun_Silent_NoStdout(t *testing.T) {
 	var hadIssues bool
 	var runErr error
 	stdout := captureStdout(func() {
-		hadIssues, runErr = cli.Run(true, false, []string{f})
+		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -90,7 +91,7 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = cli.Run(true, false, []string{f})
+		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -98,7 +99,7 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	if !strings.Contains(stdout, "file(s)") || !strings.Contains(stdout, "issue(s)") {
 		t.Errorf("normal: expected report summary on stdout, got %q", stdout)
 	}
-	if !strings.Contains(stdout, "TL010") {
+	if !strings.Contains(stdout, "PF2") {
 		t.Errorf("normal: expected rule ID in output, got %q", stdout)
 	}
 }
@@ -113,7 +114,7 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = cli.Run(true, false, []string{f})
+		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -140,7 +141,7 @@ func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = cli.Run(true, false, []string{dir})
+		_, runErr = cli.Run(true, false, []string{dir}, rules.LineEndAuto)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -169,7 +170,7 @@ func TestRun_ZeroTextFiles_Normal_NoTextFilesFound(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = cli.Run(true, false, []string{bin})
+		_, runErr = cli.Run(true, false, []string{bin}, rules.LineEndAuto)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)

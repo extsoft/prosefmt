@@ -14,7 +14,7 @@ func TestApply(t *testing.T) {
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := Apply(path); err != nil {
+	if err := Apply(path, rules.LineEndAuto); err != nil {
 		t.Fatal(err)
 	}
 	after, err := os.ReadFile(path)
@@ -25,7 +25,7 @@ func TestApply(t *testing.T) {
 	if string(after) != string(expected) {
 		t.Errorf("expected %q, got %q", expected, after)
 	}
-	issues, err := rules.CheckFile(path)
+	issues, err := rules.CheckFile(path, rules.LineEndAuto)
 	if err != nil {
 		t.Fatal(err)
 	}

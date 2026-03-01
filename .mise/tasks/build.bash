@@ -6,3 +6,4 @@ set -o errexit -o nounset
 go mod tidy
 VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || echo "dev")
 go build -ldflags="-s -w -X github.com/extsoft/prosefmt/internal/cli.Version=${VERSION}" -o "${DIST_DIR}/prosefmt" .
+echo "Artifact: ${DIST_DIR}/prosefmt"

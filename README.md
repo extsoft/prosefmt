@@ -33,9 +33,13 @@ when the `write` command is explicitly issued.
 
 The tool supports the following rules:
 
-- PF1 - a file must end with exactly one newline. Both LF and CRLF line endings are supported.
-  The tool preserves the detected style when writing.
-- PF2 - no trailing space(s) or tab(s) at the end of a line.
+- `PF1`: a file must end with exactly one newline.
+- `PF2`: no trailing space(s) or tab(s) at the end of a line.
+- `PF3`: detect and preserve existing line endings (LF or CRLF); default behavior. `--line-endings=auto`
+- `PF4`: enforce LF (`\n`). Use `--line-endings=linux`.
+- `PF5`: enforce CRLF (`\r\n`) Use `--line-endings=windows`.
+
+Only one line-ending option applies at a time (auto, linux, or windows).
 
 ## Getting Started
 
@@ -140,6 +144,10 @@ Show formatted or errored files: report in check mode, "No text files found." wh
 #### `--verbose`
 
 Print debug output: steps, scanning summary, scanner accepted/rejected with reasons, rules per file, write steps, and timing on stderr.
+
+#### `--line-endings`
+
+Line ending mode: `auto` (default), `linux`, or `windows`. Only one value is allowed. Default is **auto** (detect and preserve existing LF or CRLF). Use `linux` to enforce LF; use `windows` to enforce CRLF. Applies to both **check** and **write** commands.
 
 ## Development
 

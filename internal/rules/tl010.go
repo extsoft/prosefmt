@@ -1,11 +1,11 @@
 package rules
 
 const (
-	TL010ID  = "TL010"
-	TL010Msg = "no trailing spaces at end of line"
+	PF2ID  = "PF2"
+	PF2Msg = "no trailing spaces at end of line"
 )
 
-func CheckTL010(file string, content []byte) []Issue {
+func CheckPF2(file string, content []byte) []Issue {
 	var issues []Issue
 	lines := splitLines(content)
 	for lineNum, raw := range lines {
@@ -17,8 +17,8 @@ func CheckTL010(file string, content []byte) []Issue {
 				File:    file,
 				Line:    line,
 				Column:  trailingStart + 1,
-				RuleID:  TL010ID,
-				Message: TL010Msg,
+				RuleID:  PF2ID,
+				Message: PF2Msg,
 			})
 		}
 	}
@@ -30,6 +30,9 @@ func stripLineEnding(raw []byte) (content []byte, ending []byte) {
 		return raw[:len(raw)-2], raw[len(raw)-2:]
 	}
 	if len(raw) >= 1 && raw[len(raw)-1] == '\n' {
+		return raw[:len(raw)-1], raw[len(raw)-1:]
+	}
+	if len(raw) >= 1 && raw[len(raw)-1] == '\r' {
 		return raw[:len(raw)-1], raw[len(raw)-1:]
 	}
 	return raw, nil
@@ -46,7 +49,7 @@ func trailingSpaceStart(content []byte) int {
 	return -1
 }
 
-func FixTL010(content []byte) []byte {
+func FixPF2(content []byte) []byte {
 	lines := splitLines(content)
 	var out []byte
 	for _, raw := range lines {

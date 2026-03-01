@@ -21,11 +21,11 @@ func TestIntegration_Check_FindsIssues(t *testing.T) {
 	if cmd.ProcessState.ExitCode() != 1 {
 		t.Errorf("expected exit 1 when issues found, got %d\n%s", cmd.ProcessState.ExitCode(), out)
 	}
-	if !strings.Contains(string(out), "TL001") {
-		t.Errorf("expected output to contain TL001, got %s", out)
+	if !strings.Contains(string(out), "PF1") {
+		t.Errorf("expected output to contain PF1, got %s", out)
 	}
-	if !strings.Contains(string(out), "TL010") {
-		t.Errorf("expected output to contain TL010, got %s", out)
+	if !strings.Contains(string(out), "PF2") {
+		t.Errorf("expected output to contain PF2, got %s", out)
 	}
 }
 
@@ -60,7 +60,7 @@ func TestIntegration_Default_IsCheck(t *testing.T) {
 	if cmd.ProcessState.ExitCode() != 1 {
 		t.Errorf("expected exit 1 when issues (default check), got %d\n%s", cmd.ProcessState.ExitCode(), out)
 	}
-	if !strings.Contains(string(out), "TL010") {
-		t.Errorf("expected default to run check and report TL010, got %s", out)
+	if !strings.Contains(string(out), "PF2") {
+		t.Errorf("expected default to run check and report PF2, got %s", out)
 	}
 }
