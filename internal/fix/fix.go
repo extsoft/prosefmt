@@ -37,5 +37,12 @@ func writeAtomic(path string, data []byte) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
+	if info, err := os.Stat(path); err == nil {
+		if err := os.Chmod(tmp, info.Mode().Perm()); err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 	return os.Rename(tmp, path)
 }
