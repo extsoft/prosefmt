@@ -14,7 +14,7 @@ func TestApply(t *testing.T) {
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := Apply(path, rules.LineEndAuto); err != nil {
+	if err := Apply(path, rules.LineEndAuto, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 	after, err := os.ReadFile(path)
@@ -25,7 +25,7 @@ func TestApply(t *testing.T) {
 	if string(after) != string(expected) {
 		t.Errorf("expected %q, got %q", expected, after)
 	}
-	issues, err := rules.CheckFile(path, rules.LineEndAuto)
+	issues, err := rules.CheckFile(path, rules.LineEndAuto, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestApply_PreservesPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Apply(path, rules.LineEndAuto); err != nil {
+	if err := Apply(path, rules.LineEndAuto, 0, 0); err != nil {
 		t.Fatal(err)
 	}
 	infoAfter, err := os.Stat(path)

@@ -190,7 +190,7 @@ func TestFixPF2_PreservesCRLF(t *testing.T) {
 
 func TestCheck_Combined(t *testing.T) {
 	content := []byte("a  \nb")
-	issues := Check("f", content, LineEndAuto)
+	issues := Check("f", content, LineEndAuto, 0, 0)
 	if len(issues) < 2 {
 		t.Errorf("expected at least PF2 and PF1, got %v", issues)
 	}
@@ -198,12 +198,12 @@ func TestCheck_Combined(t *testing.T) {
 
 func TestFix_Combined(t *testing.T) {
 	content := []byte("x  \n\n\n")
-	out := Fix(content, LineEndAuto)
+	out := Fix(content, LineEndAuto, 0, 0)
 	expected := []byte("x\n")
 	if !bytes.Equal(out, expected) {
 		t.Errorf("expected %q, got %q", expected, out)
 	}
-	issues := Check("f", out, LineEndAuto)
+	issues := Check("f", out, LineEndAuto, 0, 0)
 	if len(issues) != 0 {
 		t.Errorf("fixed content should have no issues, got %v", issues)
 	}
@@ -211,7 +211,7 @@ func TestFix_Combined(t *testing.T) {
 
 func TestCheck_LineEndingsLinux_CRLF_ReportsPF4(t *testing.T) {
 	content := []byte("a\r\n")
-	issues := Check("f", content, LineEndLinux)
+	issues := Check("f", content, LineEndLinux, 0, 0)
 	var pf4 []Issue
 	for _, i := range issues {
 		if i.RuleID == PF4ID {
@@ -225,7 +225,7 @@ func TestCheck_LineEndingsLinux_CRLF_ReportsPF4(t *testing.T) {
 
 func TestCheck_LineEndingsWindows_LF_ReportsPF5(t *testing.T) {
 	content := []byte("a\n")
-	issues := Check("f", content, LineEndWindows)
+	issues := Check("f", content, LineEndWindows, 0, 0)
 	var pf5 []Issue
 	for _, i := range issues {
 		if i.RuleID == PF5ID {
@@ -239,7 +239,7 @@ func TestCheck_LineEndingsWindows_LF_ReportsPF5(t *testing.T) {
 
 func TestCheck_LineEndings_PerLine(t *testing.T) {
 	content := []byte("a\nb\r\nc\r\n")
-	issues := Check("f", content, LineEndLinux)
+	issues := Check("f", content, LineEndLinux, 0, 0)
 	var pf4 []Issue
 	for _, i := range issues {
 		if i.RuleID == PF4ID {
@@ -260,7 +260,7 @@ func TestCheck_LineEndings_PerLine(t *testing.T) {
 
 func TestFix_LineEndingsLinux_NormalizesToLF(t *testing.T) {
 	content := []byte("a\r\nb  \r\n")
-	out := Fix(content, LineEndLinux)
+	out := Fix(content, LineEndLinux, 0, 0)
 	expected := []byte("a\nb\n")
 	if !bytes.Equal(out, expected) {
 		t.Errorf("expected %q, got %q", expected, out)
@@ -269,7 +269,7 @@ func TestFix_LineEndingsLinux_NormalizesToLF(t *testing.T) {
 
 func TestFix_LineEndingsWindows_NormalizesToCRLF(t *testing.T) {
 	content := []byte("a\nb  \n")
-	out := Fix(content, LineEndWindows)
+	out := Fix(content, LineEndWindows, 0, 0)
 	expected := []byte("a\r\nb\r\n")
 	if !bytes.Equal(out, expected) {
 		t.Errorf("expected %q, got %q", expected, out)
@@ -294,7 +294,7 @@ func TestFixPF1_OnlyCR_NormalizesToCRLF(t *testing.T) {
 
 func TestFix_LineEndingsWindows_NormalizesLoneCR(t *testing.T) {
 	content := []byte("a\rb\r")
-	out := Fix(content, LineEndWindows)
+	out := Fix(content, LineEndWindows, 0, 0)
 	expected := []byte("a\r\nb\r\n")
 	if !bytes.Equal(out, expected) {
 		t.Errorf("expected %q, got %q", expected, out)

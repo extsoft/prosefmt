@@ -25,6 +25,13 @@ var (
 const rootDescription = "The simplest text formatter to keep your files consistently formatted."
 const helpTextWidth = 72
 
+// Option help layout matches common CLI style: flag on its own line, description
+// indented on the following lines, blank line after each option.
+const (
+	optionLineIndent = "  "
+	optionDescIndent = "      "
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "prosefmt [command]",
 	Short: rootDescription,
@@ -48,8 +55,10 @@ var checkCmd = &cobra.Command{
 		"Binary files are ignored. If a directory is provided, it is scanned recursively to find files. " +
 		"The command exits with code `1` if at least one issue is detected; otherwise, it exits with code `0`. " +
 		"The `check` command runs by default when no other command is specified.",
-	Args: cobra.ArbitraryArgs,
-	RunE: checkRunE,
+	Args:          cobra.ArbitraryArgs,
+	RunE:          checkRunE,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 var writeCmd = &cobra.Command{
@@ -58,8 +67,10 @@ var writeCmd = &cobra.Command{
 	Long: "The `write` command fixes formatting issues in the specified files. " +
 		"Binary files are ignored. If a directory is provided, it is scanned recursively to find files. " +
 		"The exit code is always `0`.",
-	Args: cobra.ArbitraryArgs,
-	RunE: writeRunE,
+	Args:          cobra.ArbitraryArgs,
+	RunE:          writeRunE,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func addOutputFlags(cmd *cobra.Command) {
@@ -72,9 +83,49 @@ func addLineEndingsFlag(cmd *cobra.Command) {
 	cmd.Flags().String("line-endings", "auto", "Use `auto` (default) to preserve existing line endings. `linux` enforces LF (\\n). `windows` enforces CRLF (\\r\\n).")
 }
 
+func addTabsToSpacesFlag(cmd *cobra.Command) {
+	cmd.Flags().Int("replace-tabs-with-spaces", 0, "Replace each tab character with N space characters. Omit to leave tabs unchanged.")
+}
+
+func addSpacesToTabFlag(cmd *cobra.Command) {
+	cmd.Flags().Int("replace-spaces-with-tabs", 0, "Replace each run of N space characters with a tab. Omit to leave spaces unchanged.")
+}
+
 func lineEndingsModeFromCmd(cmd *cobra.Command) (rules.LineEndingMode, error) {
 	s, _ := cmd.Flags().GetString("line-endings")
-	return rules.ParseLineEndingMode(s)
+	mode, err := rules.ParseLineEndingMode(s)
+	if err != nil {
+		return rules.LineEndAuto, optionFlagError("line-endings", err.Error())
+	}
+	return mode, nil
+}
+
+func tabWidthFromCmd(cmd *cobra.Command) (int, error) {
+	if !cmd.Flags().Changed("replace-tabs-with-spaces") {
+		return 0, nil
+	}
+	n, err := cmd.Flags().GetInt("replace-tabs-with-spaces")
+	if err != nil {
+		return 0, err
+	}
+	if n < 1 {
+		return 0, optionFlagError("replace-tabs-with-spaces", "must be a positive integer")
+	}
+	return n, nil
+}
+
+func spacesToTabFromCmd(cmd *cobra.Command) (int, error) {
+	if !cmd.Flags().Changed("replace-spaces-with-tabs") {
+		return 0, nil
+	}
+	n, err := cmd.Flags().GetInt("replace-spaces-with-tabs")
+	if err != nil {
+		return 0, err
+	}
+	if n < 1 {
+		return 0, optionFlagError("replace-spaces-with-tabs", "must be a positive integer")
+	}
+	return n, nil
 }
 
 func outputLevelFromCmd(cmd *cobra.Command) log.Level {
@@ -101,12 +152,22 @@ func init() {
 	addOutputFlags(writeCmd)
 	addLineEndingsFlag(checkCmd)
 	addLineEndingsFlag(writeCmd)
+	addTabsToSpacesFlag(checkCmd)
+	addTabsToSpacesFlag(writeCmd)
+	addSpacesToTabFlag(checkCmd)
+	addSpacesToTabFlag(writeCmd)
+	checkCmd.MarkFlagsMutuallyExclusive("replace-tabs-with-spaces", "replace-spaces-with-tabs")
+	writeCmd.MarkFlagsMutuallyExclusive("replace-tabs-with-spaces", "replace-spaces-with-tabs")
+	checkCmd.SetFlagErrorFunc(stackedFlagErrorFunc)
+	writeCmd.SetFlagErrorFunc(stackedFlagErrorFunc)
 	rootCmd.SetHelpFunc(rootHelpFunc)
 	checkCmd.SetHelpFunc(commandHelpFunc)
 	writeCmd.SetHelpFunc(commandHelpFunc)
 }
 
 var outputFlagOrder = []string{"silent", "compact", "verbose"}
+
+var configFlagOrder = []string{"line-endings", "replace-tabs-with-spaces", "replace-spaces-with-tabs"}
 
 func rootHelpFunc(cmd *cobra.Command, args []string) {
 	width, _ := cmd.Flags().GetInt("help-width")
@@ -177,7 +238,11 @@ func commandHelpFunc(cmd *cobra.Command, args []string) {
 	}
 	if f := cmd.Flags().Lookup("line-endings"); f != nil {
 		fmt.Fprintln(out, "\nConfiguration:")
-		printFlagUsage(out, f, helpTextWidth)
+		for _, name := range configFlagOrder {
+			if cf := cmd.Flags().Lookup(name); cf != nil {
+				printFlagUsage(out, cf, helpTextWidth)
+			}
+		}
 	}
 	fmt.Fprintln(out, "\nOutput:")
 	for _, name := range outputFlagOrder {
@@ -195,28 +260,54 @@ func commandHelpFunc(cmd *cobra.Command, args []string) {
 }
 
 func printFlagUsage(out io.Writer, f *pflag.Flag, width int) {
-	var prefix string
+	var flagLine string
 	if f.Shorthand != "" && f.Name != f.Shorthand {
-		prefix = fmt.Sprintf("  -%s, --%s", f.Shorthand, f.Name)
+		flagLine = optionLineIndent + "-" + f.Shorthand + ", --" + f.Name
 	} else {
-		prefix = fmt.Sprintf("      --%s", f.Name)
+		flagLine = optionLineIndent + "--" + f.Name
 	}
+	fmt.Fprintln(out, flagLine)
+	descCols := width - len(optionDescIndent)
+	if descCols < 10 {
+		descCols = 10
+	}
+	usage := wrapWords(f.Usage, descCols)
+	for _, line := range strings.Split(usage, "\n") {
+		if line == "" {
+			fmt.Fprintln(out)
+			continue
+		}
+		fmt.Fprintf(out, "%s%s\n", optionDescIndent, line)
+	}
+	fmt.Fprintln(out)
+}
 
-	usageWidth := width - len(prefix) - 2
-	if usageWidth < 10 {
-		usageWidth = 10
+func optionFlagError(flagName, message string) error {
+	return fmt.Errorf("Error:\n%s--%s\n%s%s", optionLineIndent, flagName, optionDescIndent, message)
+}
+
+func stackedFlagErrorFunc(_ *cobra.Command, err error) error {
+	return fmt.Errorf("Error:\n%s%s", optionDescIndent, err.Error())
+}
+
+func formatStderrError(err error) string {
+	msg := err.Error()
+	if strings.HasPrefix(msg, "Error:\n") {
+		return msg
 	}
-	usage := wrapWords(f.Usage, usageWidth)
-	lines := strings.Split(usage, "\n")
-	fmt.Fprintf(out, "%s  %s\n", prefix, lines[0])
-	for _, line := range lines[1:] {
-		fmt.Fprintf(out, "%*s  %s\n", len(prefix), "", line)
+	var b strings.Builder
+	b.WriteString("Error:\n")
+	for _, line := range strings.Split(msg, "\n") {
+		b.WriteString(optionDescIndent)
+		b.WriteString(line)
+		b.WriteByte('\n')
 	}
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "%s\n", formatStderrError(err))
 		os.Exit(1)
 	}
 	if checkHadIssues {
@@ -230,7 +321,7 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	log.SetLevel(log.Normal)
-	hadIssues, err := Run(true, false, args, rules.LineEndAuto)
+	hadIssues, err := Run(true, false, args, rules.LineEndAuto, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -247,8 +338,16 @@ func checkRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	tabWidth, err := tabWidthFromCmd(cmd)
+	if err != nil {
+		return err
+	}
+	spacesToTab, err := spacesToTabFromCmd(cmd)
+	if err != nil {
+		return err
+	}
 	log.SetLevel(outputLevelFromCmd(cmd))
-	hadIssues, err := Run(true, false, args, mode)
+	hadIssues, err := Run(true, false, args, mode, tabWidth, spacesToTab)
 	if err != nil {
 		return err
 	}
@@ -265,12 +364,20 @@ func writeRunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	tabWidth, err := tabWidthFromCmd(cmd)
+	if err != nil {
+		return err
+	}
+	spacesToTab, err := spacesToTabFromCmd(cmd)
+	if err != nil {
+		return err
+	}
 	log.SetLevel(outputLevelFromCmd(cmd))
-	_, err = Run(false, true, args, mode)
+	_, err = Run(false, true, args, mode, tabWidth, spacesToTab)
 	return err
 }
 
-func Run(check, doWrite bool, files []string, mode rules.LineEndingMode) (hadIssues bool, err error) {
+func Run(check, doWrite bool, files []string, mode rules.LineEndingMode, tabWidth int, spacesToTab int) (hadIssues bool, err error) {
 	start := time.Now()
 	lvl := log.GetLevel()
 	if lvl >= log.Verbose {
@@ -313,7 +420,7 @@ func Run(check, doWrite bool, files []string, mode rules.LineEndingMode) (hadIss
 				log.Logf(log.Verbose, "Writing %s\n", path)
 			}
 		}
-		issues, err := rules.CheckFile(path, mode)
+		issues, err := rules.CheckFile(path, mode, tabWidth, spacesToTab)
 		if err != nil {
 			return false, err
 		}
@@ -348,7 +455,7 @@ func Run(check, doWrite bool, files []string, mode rules.LineEndingMode) (hadIss
 		return len(allIssues) > 0, nil
 	}
 	for path := range fileIssues {
-		if err := fix.Apply(path, mode); err != nil {
+		if err := fix.Apply(path, mode, tabWidth, spacesToTab); err != nil {
 			return false, err
 		}
 		if lvl >= log.Verbose {

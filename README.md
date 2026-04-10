@@ -39,6 +39,8 @@ The tool supports the following rules:
 - `PF3`: detect and preserve existing line endings (LF or CRLF); default behavior.
 - `PF4`: enforce Linux-style LF (`\n`) line endings.
 - `PF5`: enforce Windows-style CRLF (`\r\n`) line endings.
+- `PF6`: when [`--replace-tabs-with-spaces`](#--replace-tabs-with-spaces) is set, tabs must be replaced with that many spaces.
+- `PF7`: when [`--replace-spaces-with-tabs`](#--replace-spaces-with-tabs) is set, each run of that many spaces must be replaced with a tab.
 
 ## Getting Started
 
@@ -82,7 +84,6 @@ prosefmt write some/path some.file
 
 **Usage**: `prosefmt [command] [file...]`
 
-
 By default, `prosefmt` runs the [check](#check-command) command on the specified files
 and directories — at least one file must be provided. Directories are scanned recursively.
 
@@ -106,6 +107,8 @@ The `check` command runs by default when no other command is specified.
 
 - [Configuration Flags](#configuration-flags)
   - [--line-endings](#--line-endings)
+  - [--replace-tabs-with-spaces](#--replace-tabs-with-spaces)
+  - [--replace-spaces-with-tabs](#--replace-spaces-with-tabs)
 - [Output Flags](#output-flags)
   - [--silent](#--silent)
   - [--compact](#--compact)
@@ -123,6 +126,8 @@ The exit code is always `0`.
 
 - [Configuration Flags](#configuration-flags)
   - [--line-endings](#--line-endings)
+  - [--replace-tabs-with-spaces](#--replace-tabs-with-spaces)
+  - [--replace-spaces-with-tabs](#--replace-spaces-with-tabs)
 - [Output Flags](#output-flags)
   - [--silent](#--silent)
   - [--compact](#--compact)
@@ -144,10 +149,30 @@ The `completion` command generates shell completion scripts.
 
 #### `--line-endings`
 
+> This flag is available for the [check](#check-command) and [write](#write-command) commands only.
+
 The `--line-endings` flag configures how line endings are handled.
 Use `auto` (default) to preserve existing line endings. `linux` enforces LF (\n). `windows` enforces CRLF (\r\n).
 
+#### `--replace-tabs-with-spaces`
+
 > This flag is available for the [check](#check-command) and [write](#write-command) commands only.
+
+The `--replace-tabs-with-spaces` flag takes a **positive integer** `N`. When set, each tab character (`\t`) in a file is treated as a formatting issue ([`PF6`](#overview)) and is replaced with exactly `N` space characters on [`write`](#write-command). Omit the flag to leave tab characters unchanged (default).
+
+Values that are not positive integers (for example `0`, negative numbers, or non-numeric values) are rejected.
+
+[`--replace-spaces-with-tabs`](#--replace-spaces-with-tabs) and `--replace-tabs-with-spaces` are **mutually exclusive**; only one may be passed.
+
+#### `--replace-spaces-with-tabs`
+
+> This flag is available for the [check](#check-command) and [write](#write-command) commands only.
+
+The `--replace-spaces-with-tabs` flag takes a **positive integer** `N`. When set, each run of **N** consecutive space characters is treated as a formatting issue ([`PF7`](#overview)) and is replaced with a tab character on [`write`](#write-command). Replacement repeats until no run of `N` spaces remains (for example, eight spaces with `N` = 4 become two tabs). Omit the flag to leave space characters unchanged (default).
+
+Values that are not positive integers (for example `0`, negative numbers, or non-numeric values) are rejected.
+
+[`--replace-tabs-with-spaces`](#--replace-tabs-with-spaces) and `--replace-spaces-with-tabs` are **mutually exclusive**; only one may be passed.
 
 ### Output Flags
 

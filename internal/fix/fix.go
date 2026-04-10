@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 )
 
-func Apply(path string, mode rules.LineEndingMode) error {
+func Apply(path string, mode rules.LineEndingMode, tabWidth int, spacesToTab int) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	out := rules.Fix(content, mode)
+	out := rules.Fix(content, mode, tabWidth, spacesToTab)
 	if err := writeAtomic(path, out); err != nil {
 		return err
 	}

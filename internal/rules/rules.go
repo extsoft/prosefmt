@@ -9,9 +9,15 @@ const (
 	PF5Msg = "line endings must be CRLF (windows-style)"
 )
 
-func Check(file string, content []byte, mode LineEndingMode) []Issue {
+func Check(file string, content []byte, mode LineEndingMode, tabWidth int, spacesToTab int) []Issue {
 	var issues []Issue
 	issues = append(issues, CheckPF2(file, content)...)
+	if tabWidth > 0 {
+		issues = append(issues, CheckPF6(file, content, tabWidth)...)
+	}
+	if spacesToTab > 0 {
+		issues = append(issues, CheckPF7(file, content, spacesToTab)...)
+	}
 	issues = append(issues, CheckPF1(file, content)...)
 	for _, line := range lineEndingMismatchLines(content, mode) {
 		if mode == LineEndLinux {
@@ -23,7 +29,12 @@ func Check(file string, content []byte, mode LineEndingMode) []Issue {
 	return issues
 }
 
-func Fix(content []byte, mode LineEndingMode) []byte {
+func Fix(content []byte, mode LineEndingMode, tabWidth int, spacesToTab int) []byte {
+	if tabWidth > 0 {
+		content = FixTabs(content, tabWidth)
+	} else if spacesToTab > 0 {
+		content = FixSpacesToTab(content, spacesToTab)
+	}
 	if mode != LineEndAuto {
 		content = normalizeLineEndings(content, mode)
 	}
@@ -32,10 +43,10 @@ func Fix(content []byte, mode LineEndingMode) []byte {
 	return out
 }
 
-func CheckFile(path string, mode LineEndingMode) ([]Issue, error) {
+func CheckFile(path string, mode LineEndingMode, tabWidth int, spacesToTab int) ([]Issue, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return Check(path, content, mode), nil
+	return Check(path, content, mode, tabWidth, spacesToTab), nil
 }

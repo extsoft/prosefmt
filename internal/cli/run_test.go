@@ -68,7 +68,7 @@ func TestRun_Silent_NoStdout(t *testing.T) {
 	var hadIssues bool
 	var runErr error
 	stdout := captureStdout(func() {
-		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
+		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -91,7 +91,7 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
+		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -114,7 +114,7 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto)
+		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -141,7 +141,7 @@ func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stderr := captureStderr(func() {
-		_, runErr = cli.Run(true, false, []string{dir}, rules.LineEndAuto)
+		_, runErr = cli.Run(true, false, []string{dir}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -170,7 +170,7 @@ func TestRun_ZeroTextFiles_Normal_NoTextFilesFound(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var runErr error
 	stdout := captureStdout(func() {
-		_, runErr = cli.Run(true, false, []string{bin}, rules.LineEndAuto)
+		_, runErr = cli.Run(true, false, []string{bin}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
@@ -180,5 +180,53 @@ func TestRun_ZeroTextFiles_Normal_NoTextFilesFound(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "0 file(s) scanned, 0 issue(s)") {
 		t.Errorf("expected 0 file(s) scanned, 0 issue(s) in summary, got %q", stdout)
+	}
+}
+
+func TestRun_TabWidth_ReportsPF6(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "tab.txt")
+	if err := os.WriteFile(f, []byte("a\tb\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	log.SetLevel(log.Normal)
+	defer log.SetLevel(log.Normal)
+	var hadIssues bool
+	var runErr error
+	stdout := captureStdout(func() {
+		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 4, 0)
+	})
+	if runErr != nil {
+		t.Fatal(runErr)
+	}
+	if !hadIssues {
+		t.Error("expected hadIssues true for tabs with tabWidth 4")
+	}
+	if !strings.Contains(stdout, "PF6") {
+		t.Errorf("expected PF6 in report, got %q", stdout)
+	}
+}
+
+func TestRun_TabWidthZero_NoPF6ForTabs(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "tab.txt")
+	if err := os.WriteFile(f, []byte("a\tb\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	log.SetLevel(log.Normal)
+	defer log.SetLevel(log.Normal)
+	var hadIssues bool
+	var runErr error
+	stdout := captureStdout(func() {
+		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
+	})
+	if runErr != nil {
+		t.Fatal(runErr)
+	}
+	if hadIssues {
+		t.Errorf("expected no issues without replace-tabs-with-spaces, got hadIssues=true stdout=%q", stdout)
+	}
+	if strings.Contains(stdout, "PF6") {
+		t.Errorf("did not expect PF6, got %q", stdout)
 	}
 }
