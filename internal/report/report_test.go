@@ -2,9 +2,10 @@ package report
 
 import (
 	"bytes"
-	"github.com/extsoft/prosefmt/internal/rules"
 	"strings"
 	"testing"
+
+	"github.com/extsoft/prosefmt/internal/rules"
 )
 
 func TestWrite_Compact(t *testing.T) {
@@ -36,5 +37,24 @@ func TestWrite_Compact_TwoFiles(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "6 file(s) scanned, 2 issue(s).") {
 		t.Errorf("expected 6 file(s) scanned, 2 issue(s). in summary, got %q", buf.String())
+	}
+}
+
+func TestWriteSplit_IssuesAndSummarySeparate(t *testing.T) {
+	issues := []rules.Issue{
+		{File: "a.txt", Line: 1, Column: 5, RuleID: "PF2", Message: "no trailing spaces"},
+	}
+	var issuesBuf, summaryBuf bytes.Buffer
+	if err := WriteSplit(&issuesBuf, &summaryBuf, FormatCompact, issues, 3, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(issuesBuf.String(), "PF2") {
+		t.Errorf("expected issues buffer to contain PF2, got %q", issuesBuf.String())
+	}
+	if strings.Contains(summaryBuf.String(), "PF2") {
+		t.Errorf("did not expect PF2 in summary buffer, got %q", summaryBuf.String())
+	}
+	if !strings.Contains(summaryBuf.String(), "3 file(s) scanned, 1 issue(s).") {
+		t.Errorf("expected summary in summary buffer, got %q", summaryBuf.String())
 	}
 }

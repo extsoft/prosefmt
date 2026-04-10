@@ -34,27 +34,39 @@ func captureStdout(fn func()) string {
 	return buf.String()
 }
 
-func captureStderr(fn func()) string {
-	r, w, err := os.Pipe()
+func captureStdoutStderr(fn func()) (stdout, stderr string) {
+	rOut, wOut, err := os.Pipe()
 	if err != nil {
 		panic(err)
 	}
-	old := os.Stderr
-	os.Stderr = w
-	log.SetOutput(w)
-	done := make(chan struct{})
-	var buf bytes.Buffer
+	rErr, wErr, err := os.Pipe()
+	if err != nil {
+		panic(err)
+	}
+	oldOut, oldErr := os.Stdout, os.Stderr
+	os.Stdout, os.Stderr = wOut, wErr
+	log.SetOutput(wOut)
+	doneOut := make(chan struct{})
+	doneErr := make(chan struct{})
+	var bufOut, bufErr bytes.Buffer
 	go func() {
-		io.Copy(&buf, r)
-		r.Close()
-		close(done)
+		io.Copy(&bufOut, rOut)
+		rOut.Close()
+		close(doneOut)
+	}()
+	go func() {
+		io.Copy(&bufErr, rErr)
+		rErr.Close()
+		close(doneErr)
 	}()
 	fn()
-	w.Close()
-	os.Stderr = old
+	wOut.Close()
+	wErr.Close()
+	os.Stdout, os.Stderr = oldOut, oldErr
 	log.SetOutput(nil)
-	<-done
-	return buf.String()
+	<-doneOut
+	<-doneErr
+	return bufOut.String(), bufErr.String()
 }
 
 func TestRun_Silent_NoStdout(t *testing.T) {
@@ -67,7 +79,7 @@ func TestRun_Silent_NoStdout(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var hadIssues bool
 	var runErr error
-	stdout := captureStdout(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
@@ -76,12 +88,12 @@ func TestRun_Silent_NoStdout(t *testing.T) {
 	if !hadIssues {
 		t.Error("expected hadIssues true")
 	}
-	if len(stdout) != 0 {
-		t.Errorf("silent: expected no stdout, got %q", stdout)
+	if len(stdout) != 0 || len(stderr) != 0 {
+		t.Errorf("silent: expected no stdout/stderr output, got stdout=%q stderr=%q", stdout, stderr)
 	}
 }
 
-func TestRun_Normal_StdoutHasReport(t *testing.T) {
+func TestRun_Normal_StderrHasIssuesAndSummary(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "bad.txt")
 	if err := os.WriteFile(f, []byte("x  \n"), 0644); err != nil {
@@ -90,21 +102,24 @@ func TestRun_Normal_StdoutHasReport(t *testing.T) {
 	log.SetLevel(log.Normal)
 	defer log.SetLevel(log.Normal)
 	var runErr error
-	stdout := captureStdout(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
 	}
-	if !strings.Contains(stdout, "file(s)") || !strings.Contains(stdout, "issue(s)") {
-		t.Errorf("normal: expected report summary on stdout, got %q", stdout)
+	if len(stdout) != 0 {
+		t.Errorf("normal: expected no stdout when issues present, got %q", stdout)
 	}
-	if !strings.Contains(stdout, "PF2") {
-		t.Errorf("normal: expected rule ID in output, got %q", stdout)
+	if !strings.Contains(stderr, "file(s)") || !strings.Contains(stderr, "issue(s)") {
+		t.Errorf("normal: expected report summary on stderr, got %q", stderr)
+	}
+	if !strings.Contains(stderr, "PF2") {
+		t.Errorf("normal: expected rule ID on stderr, got %q", stderr)
 	}
 }
 
-func TestRun_Verbose_StderrHasScanning(t *testing.T) {
+func TestRun_Verbose_StdoutHasScanning(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "good.txt")
 	if err := os.WriteFile(f, []byte("a\n"), 0644); err != nil {
@@ -113,21 +128,24 @@ func TestRun_Verbose_StderrHasScanning(t *testing.T) {
 	log.SetLevel(log.Verbose)
 	defer log.SetLevel(log.Normal)
 	var runErr error
-	stderr := captureStderr(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		_, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
 	}
-	if !strings.Contains(stderr, "Scanning") && !strings.Contains(stderr, "Scanned") {
-		t.Errorf("verbose: expected Scanning/Scanned on stderr, got %q", stderr)
+	if !strings.Contains(stdout, "Scanning") && !strings.Contains(stdout, "Scanned") {
+		t.Errorf("verbose: expected Scanning/Scanned on stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "Completed in") {
-		t.Errorf("verbose: expected timing on stderr, got %q", stderr)
+	if !strings.Contains(stdout, "Completed in") {
+		t.Errorf("verbose: expected timing on stdout, got %q", stdout)
+	}
+	if len(stderr) != 0 {
+		t.Errorf("verbose: expected no stderr without PF issues, got %q", stderr)
 	}
 }
 
-func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
+func TestRun_Verbose_StdoutHasRejectedAndAccepted(t *testing.T) {
 	dir := t.TempDir()
 	good := filepath.Join(dir, "good.txt")
 	bin := filepath.Join(dir, "bin.bin")
@@ -140,23 +158,26 @@ func TestRun_Verbose_StderrHasRejectedAndAccepted(t *testing.T) {
 	log.SetLevel(log.Verbose)
 	defer log.SetLevel(log.Normal)
 	var runErr error
-	stderr := captureStderr(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		_, runErr = cli.Run(true, false, []string{dir}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
 	}
-	if !strings.Contains(stderr, "Configuration:") {
-		t.Errorf("verbose: expected Configuration line on stderr, got %q", stderr)
+	if !strings.Contains(stdout, "Configuration:") {
+		t.Errorf("verbose: expected Configuration line on stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "scanner: rejected") {
-		t.Errorf("verbose: expected scanner rejected on stderr, got %q", stderr)
+	if !strings.Contains(stdout, "scanner: rejected") {
+		t.Errorf("verbose: expected scanner rejected on stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "scanner: accepted") {
-		t.Errorf("verbose: expected scanner accepted on stderr, got %q", stderr)
+	if !strings.Contains(stdout, "scanner: accepted") {
+		t.Errorf("verbose: expected scanner accepted on stdout, got %q", stdout)
 	}
-	if !strings.Contains(stderr, "null byte") {
-		t.Errorf("verbose: expected reason null byte for binary file, got %q", stderr)
+	if !strings.Contains(stdout, "null byte") {
+		t.Errorf("verbose: expected reason null byte for binary file on stdout, got %q", stdout)
+	}
+	if len(stderr) != 0 {
+		t.Errorf("verbose: expected no stderr without PF issues, got %q", stderr)
 	}
 }
 
@@ -193,7 +214,7 @@ func TestRun_TabWidth_ReportsPF6(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var hadIssues bool
 	var runErr error
-	stdout := captureStdout(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 4, 0)
 	})
 	if runErr != nil {
@@ -202,8 +223,11 @@ func TestRun_TabWidth_ReportsPF6(t *testing.T) {
 	if !hadIssues {
 		t.Error("expected hadIssues true for tabs with tabWidth 4")
 	}
-	if !strings.Contains(stdout, "PF6") {
-		t.Errorf("expected PF6 in report, got %q", stdout)
+	if !strings.Contains(stderr, "PF6") {
+		t.Errorf("expected PF6 on stderr, got stdout=%q stderr=%q", stdout, stderr)
+	}
+	if !strings.Contains(stderr, "file(s) scanned") {
+		t.Errorf("expected scan summary on stderr with issues, got stdout=%q stderr=%q", stdout, stderr)
 	}
 }
 
@@ -217,16 +241,22 @@ func TestRun_TabWidthZero_NoPF6ForTabs(t *testing.T) {
 	defer log.SetLevel(log.Normal)
 	var hadIssues bool
 	var runErr error
-	stdout := captureStdout(func() {
+	stdout, stderr := captureStdoutStderr(func() {
 		hadIssues, runErr = cli.Run(true, false, []string{f}, rules.LineEndAuto, 0, 0)
 	})
 	if runErr != nil {
 		t.Fatal(runErr)
 	}
 	if hadIssues {
-		t.Errorf("expected no issues without replace-tabs-with-spaces, got hadIssues=true stdout=%q", stdout)
+		t.Errorf("expected no issues without replace-tabs-with-spaces, got hadIssues=true stdout=%q stderr=%q", stdout, stderr)
 	}
-	if strings.Contains(stdout, "PF6") {
-		t.Errorf("did not expect PF6, got %q", stdout)
+	if strings.Contains(stdout, "PF6") || strings.Contains(stderr, "PF6") {
+		t.Errorf("did not expect PF6, got stdout=%q stderr=%q", stdout, stderr)
+	}
+	if !strings.Contains(stdout, "1 file(s) scanned, 0 issue(s)") {
+		t.Errorf("expected zero-issue summary on stdout, got stdout=%q stderr=%q", stdout, stderr)
+	}
+	if len(stderr) != 0 {
+		t.Errorf("expected no stderr without issues, got %q", stderr)
 	}
 }

@@ -321,6 +321,8 @@ func rootRunE(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	log.SetLevel(log.Normal)
+	log.SetOutput(os.Stdout)
+	defer log.SetOutput(nil)
 	hadIssues, err := Run(true, false, args, rules.LineEndAuto, 0, 0)
 	if err != nil {
 		return err
@@ -347,6 +349,8 @@ func checkRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	log.SetLevel(outputLevelFromCmd(cmd))
+	log.SetOutput(os.Stdout)
+	defer log.SetOutput(nil)
 	hadIssues, err := Run(true, false, args, mode, tabWidth, spacesToTab)
 	if err != nil {
 		return err
@@ -373,6 +377,8 @@ func writeRunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	log.SetLevel(outputLevelFromCmd(cmd))
+	log.SetOutput(os.Stdout)
+	defer log.SetOutput(nil)
 	_, err = Run(false, true, args, mode, tabWidth, spacesToTab)
 	return err
 }
@@ -437,13 +443,17 @@ func Run(check, doWrite bool, files []string, mode rules.LineEndingMode, tabWidt
 					ids = append(ids, id)
 				}
 				sort.Strings(ids)
-				log.Logf(log.Verbose, "rules: %s -> %d issue(s): %s\n", path, len(issues), strings.Join(ids, ", "))
+				fmt.Fprintf(os.Stderr, "rules: %s -> %d issue(s): %s\n", path, len(issues), strings.Join(ids, ", "))
 			}
 		}
 	}
 	if check {
 		if lvl >= log.Normal {
-			if err := report.Write(os.Stdout, report.FormatCompact, allIssues, len(scanned), scanned); err != nil {
+			summaryW := os.Stdout
+			if len(allIssues) > 0 {
+				summaryW = os.Stderr
+			}
+			if err := report.WriteSplit(os.Stderr, summaryW, report.FormatCompact, allIssues, len(scanned), scanned); err != nil {
 				return false, err
 			}
 		}

@@ -176,8 +176,11 @@ Values that are not positive integers (for example `0`, negative numbers, or non
 
 ### Output Flags
 
-The [check](#check-command) and [write](#write-command) commands print output to standard output.
-The flags below determine the output format.
+For [check](#check-command), PF issue lines (`path:line:col: PFx: …`), the per-file verbose line that lists PF rule IDs (`rules: …`), and the scan summary when there is at least one issue (`N file(s) scanned, M issue(s).` with M > 0) are written to stderr. In all other cases, stdout is used.
+
+For [write](#write-command), only stdout is used.
+
+The flags below determine how much is printed.
 
 > These flags are available for the [check](#check-command) and [write](#write-command) commands only.
 
